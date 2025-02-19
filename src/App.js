@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import Modal from "./components/Modal";
 import SingleCard from "./components/SingleCard";
@@ -16,87 +16,100 @@ function App() {
   const [cards, setCards] = useState([]);
   const [turns, setTurns] = useState(0);
   const [showModal, setShowModal] = useState(false);
+
+  //user choices state
   const [choiceOne, setChoiceOne] = useState(null);
   const [choiceTwo, setChoiceTwo] = useState(null);
   const [disabled, setDisabled] = useState(false);
 
-  // Initialize Game
-  const initializeGame = useCallback(() => {
-    const shuffledCards = [...cardImages, ...cardImages]
+  //shuffle cards
+  const shuffleCards = () => {
+    const shuffleCards = [...cardImages, ...cardImages]
       .sort(() => Math.random() - 0.5)
       .map((card) => ({ ...card, id: Math.random() }));
 
-    setCards(shuffledCards);
+    setCards(shuffleCards);
     setTurns(0);
-    setChoiceOne(null);
-    setChoiceTwo(null);
-    setShowModal(false);
-  }, []);
+  };
 
-  // Handle user card selection
-  const selectCard = (card) => {
+  //Handling of user choices
+  const handleChoice = (card) => {
     choiceOne ? setChoiceTwo(card) : setChoiceOne(card);
   };
 
-  // Reset choices and increment turn count
-  const nextTurn = useCallback(() => {
+  const resetTurn = () => {
     setChoiceOne(null);
     setChoiceTwo(null);
-    setTurns((prev) => prev + 1);
+    setTurns((prevTurns) => prevTurns + 1);
     setDisabled(false);
-  }, []);
+  };
 
-  // Compare two selected cards
+  const handleCloseModal = () => {
+    setShowModal(false);
+  };
+
+  //State changes
+  //Comparing the two selected cards using useEffect hook
   useEffect(() => {
     if (choiceOne && choiceTwo) {
+      //Disable other cards if two cards are selected
       setDisabled(true);
 
       if (choiceOne.src === choiceTwo.src) {
-        setCards((prev) =>
-          prev.map((card) =>
-            card.src === choiceOne.src ? { ...card, matched: true } : card
-          )
-        );
-        nextTurn();
+        //Set the matched property to true
+        setCards((prevCards) => {
+          return prevCards.map((card) => {
+            if (card.src === choiceOne.src) {
+              return { ...card, matched: true };
+            } else {
+              return card;
+            }
+          });
+        });
+
+        resetTurn();
       } else {
-        setTimeout(() => nextTurn(), 1000);
+        setTimeout(() => resetTurn(), 1000);
       }
     }
-  }, [choiceOne, choiceTwo, nextTurn]);
+  }, [choiceOne, choiceTwo]);
 
-  // Start game on first render
+  // Start the game automatically
   useEffect(() => {
-    initializeGame();
-  }, [initializeGame]);
+    shuffleCards();
+  }, []);
 
-  // Check for game completion
+  // Check if user won the game
   useEffect(() => {
-    if (cards.length > 0 && cards.every((card) => card.matched)) {
-      setTimeout(() => setShowModal(true), 800);
+    if (cards.length > 0) {
+      let isGameFinished = cards.every((card) => card.matched === true);
+      if (isGameFinished) {
+        setTimeout(() => setShowModal(true), 800);
+      }
     }
   }, [cards]);
 
   return (
     <div className="App">
       <h1>Magic Memory Game</h1>
-      <button className="new-game-btn" onClick={initializeGame}>
+      <button className="new-game-btn" onClick={shuffleCards}>
         New Game
       </button>
       <div className="card-grid">
         {cards.map((card) => (
           <SingleCard
-            key={card.id}
             card={card}
-            handleChoice={selectCard}
+            key={card.id}
+            handleChoice={handleChoice}
             flipped={card === choiceOne || card === choiceTwo || card.matched}
             disabled={disabled}
           />
         ))}
       </div>
       <p>No. of turns: {turns}</p>
-      <footer>Made by dave.visual (from Holy Cross of Davao College)</footer>
+      <footer>Made by dave.visual (from a Holy Cross of Davao College)</footer>
 
-      {showModal && <Modal handleClose={() => setShowModal(false)} />}
+      {showModal && <Modal handleClose={handleCloseModal} />}
     </div>
   );
 }
